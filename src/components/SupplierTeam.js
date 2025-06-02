@@ -65,8 +65,60 @@ const SupplierTeam = () => {
   const [newLiaison, setNewLiaison] = useState("");
   const [newEmail, setNewEmail] = useState("");
   const [activeNav, setActiveNav] = useState('My Team');
+  const [supplierId, setSupplierId] = useState(null);
 
-  // Nav bar items
+  // Get supplier's Supabase user ID on mount
+  useEffect(() => {
+    async function fetchSupplierId() {
+      try {
+        const { data: { user } } = await import('../supabaseClient').then(m => m.supabase.auth.getUser());
+        if (user && user.id) {
+          setSupplierId(user.id);
+        }
+      } catch {
+        setSupplierId(null);
+      }
+    }
+    fetchSupplierId();
+  }, []);
+
+  // Load liaisons for this supplierId
+  useEffect(() => {
+    if (!supplierId) return;
+    const allLiaisons = JSON.parse(localStorage.getItem("supplierTeamLiaisons")) || {};
+    setLiaisons(Array.isArray(allLiaisons[supplierId]) ? allLiaisons[supplierId] : []);
+  }, [supplierId]);
+
+  const addLiaison = () => {
+    if (!supplierId) { alert('User not loaded. Please wait and try again.'); return; }
+    if (
+      newLiaison.trim() &&
+      newEmail.trim() &&
+      !liaisons.some(
+        (l) => l && typeof l === 'object' && l.name === newLiaison.trim() && l.email === newEmail.trim()
+      )
+    ) {
+      const updated = [...liaisons, { name: newLiaison.trim(), email: newEmail.trim() }];
+      setLiaisons(updated);
+      const allLiaisons = JSON.parse(localStorage.getItem("supplierTeamLiaisons")) || {};
+      allLiaisons[supplierId] = updated;
+      localStorage.setItem("supplierTeamLiaisons", JSON.stringify(allLiaisons));
+      setNewLiaison("");
+      setNewEmail("");
+    }
+  };
+
+  const removeLiaison = (name, email) => {
+    if (!supplierId) return;
+    const updated = liaisons.filter(
+      (l) => !(l && typeof l === 'object' && l.name === name && l.email === email)
+    );
+    setLiaisons(updated);
+    const allLiaisons = JSON.parse(localStorage.getItem("supplierTeamLiaisons")) || {};
+    allLiaisons[supplierId] = updated;
+    localStorage.setItem("supplierTeamLiaisons", JSON.stringify(allLiaisons));
+  };
+
   const mainNavItems = [
     { name: 'Home', path: '/SupplierHomepage' },
     { name: 'My Events', path: '/SupplierEvents' },
@@ -77,36 +129,6 @@ const SupplierTeam = () => {
     { name: 'My Team', path: '/SupplierTeam' }
   ];
 
-  useEffect(() => {
-    // Load liaisons from localStorage
-    let stored = JSON.parse(localStorage.getItem("supplierTeamLiaisons"));
-    if (!Array.isArray(stored)) stored = [];
-    setLiaisons(stored);
-  }, []);
-
-  const addLiaison = () => {
-    if (
-      newLiaison.trim() &&
-      newEmail.trim() &&
-      !liaisons.some(
-        (l) => l && typeof l === 'object' && l.name === newLiaison.trim() && l.email === newEmail.trim()
-      )
-    ) {
-      const updated = [...liaisons, { name: newLiaison.trim(), email: newEmail.trim() }];
-      setLiaisons(updated);
-      localStorage.setItem("supplierTeamLiaisons", JSON.stringify(updated));
-      setNewLiaison("");
-      setNewEmail("");
-    }
-  };
-
-  const removeLiaison = (name, email) => {
-    const updated = liaisons.filter(
-      (l) => !(l && typeof l === 'object' && l.name === name && l.email === email)
-    );
-    setLiaisons(updated);
-    localStorage.setItem("supplierTeamLiaisons", JSON.stringify(updated));
-  };
 
   return (
     <div className="app-container">
