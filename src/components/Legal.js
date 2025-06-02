@@ -112,7 +112,7 @@ const Legal = () => {
 
         {/* Category Tabs + Search/Filter */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '32px 0 16px 0', flexWrap: 'wrap' }}>
-          <nav className="category-tabs" style={{ display: 'flex', gap: '8px' }}>
+          <nav className="category-tabs" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', overflowX: 'unset' }}>
             {categories.map(category => (
               <button
                 key={category.name}
@@ -334,7 +334,8 @@ const Legal = () => {
           gap: 8px;
           margin-bottom: 24px;
           border-bottom: 2px solid var(--border-color);
-          overflow-x: auto;
+          flex-wrap: wrap;
+          overflow-x: unset;
         }
 
         .tab-btn {
