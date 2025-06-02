@@ -114,6 +114,8 @@ import CookieConsent from './components/CookieConsent';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import PrivacySettings from './components/PrivacySettings';
 
+import VerifyEmail from './components/VerifyEmail';
+
 function App() {
   const location = useLocation();
 
@@ -131,6 +133,7 @@ function App() {
   return (
     <div className="app-container">
       <Routes>
+        <Route path="/verify" element={<VerifyEmail />} />
         <Route path="/TestSupabase" element={<TestSupabase />} />
         {/* Main Routes */}
         <Route path="/" element={<LandingPage />} />
