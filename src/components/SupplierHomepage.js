@@ -174,23 +174,30 @@ const SupplierHomepage = () => {
           {visibleEvents.length === 0 ? (
             <p style={{ color: '#A888B5', fontSize: '18px' }}>No events available for you at this time.</p>
           ) : (
-            <ul className="event-cards-list">
-              {visibleEvents.map(event => (
-                <li key={event.id} className="event-card-custom">
-                  <strong style={{ color: '#A888B5', fontSize: '20px' }}>{event.name}</strong>
-                  <div style={{ color: '#A888B5', fontSize: '15px', marginTop: '4px' }}>
-                    {event.type} {event.subType ? `- ${event.subType}` : ''} | {event.location} | {event.visibility === 'private' ? 'Private' : 'Public'}
+            <ul className="event-cards-list" style={{ padding: '0 32px' }}>
+              {visibleEvents.map((event) => (
+                <li key={event.id} className="event-card-custom" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 18, padding: '12px 0' }}>
+                  <img
+                    src={process.env.PUBLIC_URL + '/images/venues/5.png'}
+                    alt="Event"
+                    style={{ width: '100px', height: '80px', objectFit: 'cover', borderRadius: 12, background: '#eee', flexShrink: 0, marginLeft: '20px' }}
+                  />
+                  <div style={{ flex: 1 }}>
+                    <strong style={{ color: '#A888B5', fontSize: '20px' }}>{event.name}</strong>
+                    <div style={{ color: '#A888B5', fontSize: '15px', marginTop: '4px' }}>
+                      {event.type} {event.subType ? `- ${event.subType}` : ''} | {event.location} | {event.visibility === 'private' ? 'Private' : 'Public'}
+                    </div>
+                    <div style={{ color: '#A888B5', fontSize: '14px', marginTop: '4px' }}>
+                      {event.startDate} to {event.endDate}
+                    </div>
+                    <button
+                      className="apply-btn"
+                      style={{ background: '#A888B5', color: '#441752', border: 'none', borderRadius: '8px', padding: '10px 28px', fontWeight: 600, fontSize: '16px', cursor: 'pointer', marginTop: 10 }}
+                      onClick={() => alert('Applied!')}
+                    >
+                      Apply
+                    </button>
                   </div>
-                  <div style={{ color: '#A888B5', fontSize: '14px', marginTop: '4px' }}>
-                    {event.startDate} to {event.endDate}
-                  </div>
-                  <button
-                    className="apply-btn"
-                    style={{ background: '#A888B5', color: '#441752', border: 'none', borderRadius: '8px', padding: '10px 28px', fontWeight: 600, fontSize: '16px', cursor: 'pointer' }}
-                    onClick={() => alert('Applied!')}
-                  >
-                    Apply
-                  </button>
                 </li>
               ))}
             </ul>

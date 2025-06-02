@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useAdminId } from '../hooks/useAdminId';
 import { useNavigate } from 'react-router-dom';
 import UserProfile from './UserProfile';
 
@@ -12,6 +13,7 @@ function getUserContext() {
 }
 
 const MyTeam = () => {
+  const { adminId } = useAdminId();
   const navigate = useNavigate();
   const user = getUserContext();
   const [planners, setPlanners] = useState([]);
@@ -31,12 +33,17 @@ const MyTeam = () => {
   ];
 
   useEffect(() => {
-    // Load planners from localStorage
-    const stored = JSON.parse(localStorage.getItem("myTeamPlanners")) || [];
-    setPlanners(stored);
-  }, []);
+    // Load planners from localStorage, now as an object keyed by adminId
+    const allPlanners = JSON.parse(localStorage.getItem("myTeamPlanners")) || {};
+    const adminPlanners = adminId ? allPlanners[adminId] || [] : [];
+    setPlanners(adminPlanners);
+  }, [adminId]);
 
   const addPlanner = () => {
+    if (!adminId) {
+      alert('User not loaded. Please wait and try again.');
+      return;
+    }
     if (
       newPlanner.trim() &&
       newEmail.trim() &&
@@ -44,9 +51,12 @@ const MyTeam = () => {
         (p) => p && typeof p === 'object' && p.name === newPlanner.trim() && p.email === newEmail.trim()
       )
     ) {
-      const updated = [...planners, { name: newPlanner.trim(), email: newEmail.trim() }];
+      const updated = [...planners, { name: newPlanner.trim(), email: newEmail.trim(), admin_id: adminId }];
       setPlanners(updated);
-      localStorage.setItem("myTeamPlanners", JSON.stringify(updated));
+      // Save planners as an object keyed by adminId
+      const allPlanners = JSON.parse(localStorage.getItem("myTeamPlanners")) || {};
+      allPlanners[adminId] = updated;
+      localStorage.setItem("myTeamPlanners", JSON.stringify(allPlanners));
       setNewPlanner("");
       setNewEmail("");
     }
@@ -57,7 +67,10 @@ const MyTeam = () => {
       (p) => !(p && typeof p === 'object' && p.name === name && p.email === email)
     );
     setPlanners(updated);
-    localStorage.setItem("myTeamPlanners", JSON.stringify(updated));
+    // Save planners as an object keyed by adminId
+    const allPlanners = JSON.parse(localStorage.getItem("myTeamPlanners")) || {};
+    allPlanners[adminId] = updated;
+    localStorage.setItem("myTeamPlanners", JSON.stringify(allPlanners));
   };
 
   return (

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAdminId } from '../hooks/useAdminId';
 import { useNavigate } from 'react-router-dom';
 import UserProfile from './UserProfile';
 
@@ -15,6 +16,7 @@ function getUserContext() {
 
 
 const MessagesPage = () => {
+  const { adminId } = useAdminId();
   const navigate = useNavigate();
   const [activeNav, setActiveNav] = useState('Home');
   const [allMessages, setAllMessages] = useState([]);
@@ -56,21 +58,38 @@ const MessagesPage = () => {
         .filter(ev => Array.isArray(ev.invitedSuppliers) && ev.invitedSuppliers.includes(user.name))
         .map(ev => ({ eventId: ev.id, eventName: ev.name, supplierName: user.name }));
     } else {
-      // Admin: all events and their suppliers
-      pairs = events.flatMap(ev =>
-        (ev.invitedSuppliers || []).map(supplier => ({ eventId: ev.id, eventName: ev.name, supplierName: supplier }))
-      );
+      // Admin: only show events created by this admin
+      pairs = events
+        .filter(ev => ev.admin_id === adminId)
+        .flatMap(ev => {
+          if (!ev.invitedSuppliers || ev.invitedSuppliers.length === 0) {
+            // No suppliers yet: show a placeholder so the admin can see their event
+            return [{ eventId: ev.id, eventName: ev.name, supplierName: '(No suppliers yet)' }];
+          }
+          return (ev.invitedSuppliers || []).map(supplier => ({ eventId: ev.id, eventName: ev.name, supplierName: supplier }));
+        });
     }
     setEventSupplierPairs(pairs);
-    // Auto-select first pair
-    if (pairs.length > 0 && !selectedPair) setSelectedPair(pairs[0]);
-  }, [user.isSupplier, user.name]);
+    // Always auto-select first pair if none is selected or if selectedPair is no longer in the list
+    if (pairs.length > 0 && (!selectedPair || !pairs.some(pair => pair.eventId === selectedPair.eventId && pair.supplierName === selectedPair.supplierName))) {
+      setSelectedPair(pairs[0]);
+    }
+    // If no pairs, clear selectedPair
+    if (pairs.length === 0 && selectedPair) {
+      setSelectedPair(null);
+    }
+  }, [user.isSupplier, user.name, adminId, selectedPair]);
 
   // Fetch all messages
   useEffect(() => {
-    const msgs = JSON.parse(localStorage.getItem('messages')) || [];
-    setAllMessages(msgs);
-  }, [selectedPair]);
+    // Load messages from localStorage
+    let stored = JSON.parse(localStorage.getItem('messages')) || [];
+    // If admin, filter by admin_id
+    if (!user.isSupplier && adminId) {
+      stored = stored.filter(m => m.admin_id === adminId);
+    }
+    setAllMessages(stored);
+  }, [adminId]);
 
   // Filter messages for selected event/supplier pair
   const filteredMessages = selectedPair
@@ -90,6 +109,7 @@ const MessagesPage = () => {
       supplier: selectedPair.supplierName,
       content: inputValue,
       timestamp: Date.now(),
+      ...(user.isSupplier ? {} : { admin_id: adminId })
     };
     const updatedMsgs = [...allMessages, newMsg];
     setAllMessages(updatedMsgs);

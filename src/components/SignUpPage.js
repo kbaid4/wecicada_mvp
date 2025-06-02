@@ -58,7 +58,7 @@ const SignUpPage = () => {
           data: {
             full_name: formData.name,
             companyname: formData.companyname,
-            type: formData.type,
+            user_type: formData.type === "Admin" ? "admin" : (formData.type === "Supplier" ? "supplier" : ""),
             eventType: formData.eventType,
             serviceType: formData.serviceType,
             address: formData.address,
@@ -76,7 +76,7 @@ const SignUpPage = () => {
           data: {
             full_name: formData.name,
             companyname: formData.companyname,
-            type: formData.type,
+            user_type: formData.type === "Admin" ? "admin" : (formData.type === "Supplier" ? "supplier" : ""),
             eventType: formData.eventType,
             serviceType: formData.serviceType,
             address: formData.address,

@@ -349,7 +349,7 @@ const SuppliersPage = () => {
           gap: 8px;
           margin-bottom: 24px;
           border-bottom: 2px solid var(--border-color);
-          overflow-x: auto;
+
         }
 
         .tab-btn {

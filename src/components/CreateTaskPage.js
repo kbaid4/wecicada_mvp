@@ -4,6 +4,8 @@ import UserProfile from './UserProfile';
 import { logTaskChange } from '../utils/auditLogger';
 import { supabase } from '../supabaseClient';
 
+import { useAdminId } from '../hooks/useAdminId';
+
 const CreateTaskPage = () => {
   const { eventId } = useParams();
   const navigate = useNavigate();
@@ -25,13 +27,17 @@ const CreateTaskPage = () => {
     { name: 'My Team', path: '/my-team' }
   ];
 
+  const { adminId } = useAdminId();
+
   const [taskData, setTaskData] = useState({
     name: '',
     budget: '',
     liaison: '',
     status: '',
     date: '',
-    day: ''
+    day: '',
+    description: '',
+    searchedSupplier: ''
   });
 
   const statusOptions = ['Stopped', 'In Progress', 'Negotiation'];
@@ -45,12 +51,34 @@ const CreateTaskPage = () => {
     setLiaisonOptions(liaisonNames);
   }, []);
 
+  // Fetch suppliers from Supabase
+  const [supplierOptions, setSupplierOptions] = useState([]);
+  useEffect(() => {
+    async function fetchSuppliers() {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name, email, company_name, created_at, user_type')
+        .eq('user_type', 'supplier')
+        .order('created_at', { ascending: false });
+      if (!error && Array.isArray(data)) {
+        setSupplierOptions(data);
+      } else {
+        setSupplierOptions([]);
+      }
+    }
+    fetchSuppliers();
+  }, []);
+
   useEffect(() => {
     const allTasksObj = JSON.parse(localStorage.getItem('tasks')) || {}; 
     console.log("Loaded tasks for event:", eventId, allTasksObj[eventId] || []);
   }, [eventId]);
   
   const handleCreateTask = async () => {
+    if (!adminId) {
+      alert('User not loaded. Please wait and try again.');
+      return;
+    }
     try {
       const allTasksObj = JSON.parse(localStorage.getItem('tasks')) || {};
       if (!allTasksObj[eventId]) {
@@ -61,10 +89,12 @@ const CreateTaskPage = () => {
       const taskWithId = {
         ...taskData,
         id: Date.now().toString(),
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        admin_id: adminId
       };
       
       allTasksObj[eventId].push(taskWithId);
+
       localStorage.setItem('tasks', JSON.stringify(allTasksObj));
       
       // Also update the event's tasks array for budget calculation in Events page
@@ -174,6 +204,22 @@ const CreateTaskPage = () => {
                   </select>
                   {/* Liaisons are loaded from localStorage key 'teamMembers' (array of names) */}
                 </div>
+                <div className="input-group">
+                  <label>Search Suppliers</label>
+                  <select
+                    value={taskData.searchedSupplier}
+                    onChange={e => setTaskData({ ...taskData, searchedSupplier: e.target.value })}
+                  >
+                    <option value="">Select Supplier from Signup</option>
+                    {supplierOptions.length === 0 && <option disabled>No suppliers found.</option>}
+                    {supplierOptions.map(supplier => {
+                      const displayName = supplier.full_name || supplier.companyname || supplier.email || `Supplier ${supplier.id}`;
+                      return (
+                        <option key={supplier.id} value={displayName}>{displayName}</option>
+                      );
+                    })}
+                  </select>
+                </div>
               </div>
               <div className="form-column">
                 <div className="input-group">
@@ -198,12 +244,12 @@ const CreateTaskPage = () => {
                     />
                   </div>
                   <div className="input-group">
-                    <label>Day</label>
+                    <label>Description</label>
                     <input
                       type="text"
-                      placeholder="e.g. Present, Event Day, etc."
-                      value={taskData.day}
-                      onChange={(e) => setTaskData({...taskData, day: e.target.value})}
+                      placeholder="e.g. Description of the task"
+                      value={taskData.description}
+                      onChange={(e) => setTaskData({...taskData, description: e.target.value})}
                     />
                   </div>
                 </div>

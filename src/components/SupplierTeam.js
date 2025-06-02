@@ -79,7 +79,8 @@ const SupplierTeam = () => {
 
   useEffect(() => {
     // Load liaisons from localStorage
-    const stored = JSON.parse(localStorage.getItem("supplierTeamLiaisons")) || [];
+    let stored = JSON.parse(localStorage.getItem("supplierTeamLiaisons"));
+    if (!Array.isArray(stored)) stored = [];
     setLiaisons(stored);
   }, []);
 
@@ -172,17 +173,17 @@ const SupplierTeam = () => {
           </button>
         </div>
         <h2>Liaisons</h2>
-        {liaisons.length === 0 ? (
+        {Array.isArray(liaisons) && liaisons.length === 0 ? (
           <p>No liaisons added yet.</p>
         ) : (
           <ul className="liaison-list">
-            {liaisons.map((liaison, idx) => {
+            {Array.isArray(liaisons) && liaisons.map((liaison, idx) => {
               if (!liaison || typeof liaison !== 'object' || !liaison.name || !liaison.email) return null;
               return (
                 <li className="liaison-list-item" key={idx + '-' + String(liaison.name) + '-' + String(liaison.email)}>
                   <span className="liaison-name">{typeof liaison.name === 'string' ? liaison.name : ''}</span>
                   <span className="liaison-email">{typeof liaison.email === 'string' ? liaison.email : ''}</span>
-                  <button className="remove-btn" onClick={() => removeLiaison(idx)}>
+                  <button className="remove-btn" onClick={() => removeLiaison(liaison.name, liaison.email)}>
                     Remove
                   </button>
                 </li>

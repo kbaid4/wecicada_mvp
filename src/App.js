@@ -131,6 +131,7 @@ function App() {
   return (
     <div className="app-container">
       <Routes>
+        <Route path="/TestSupabase" element={<TestSupabase />} />
         {/* Main Routes */}
         <Route path="/" element={<LandingPage />} />
         <Route path="/SignUpPage" element={<SignUpPage />} />

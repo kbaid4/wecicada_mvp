@@ -7,14 +7,15 @@ function TestSupabase() {
 
   useEffect(() => {
     async function testConnection() {
-      // Try to fetch the list of tables as a test (public schema)
-      const { data, error } = await supabase.from('profiles').select('*').limit(1);
+      // Try to fetch all supplier rows for diagnostics
+      const { data, error } = await supabase.from('profiles').select('*');
       if (error) {
-        setStatus('Connected to Supabase, but table not found or error occurred.');
+        setStatus('Connected to Supabase, but error occurred.');
         setError(error.message);
       } else {
         setStatus('Supabase connection successful!');
         setError(null);
+        console.log('All profiles:', data);
       }
     }
     testConnection();

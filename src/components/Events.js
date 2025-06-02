@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { useAdminId } from '../hooks/useAdminId';
 import { useNavigate, useLocation } from 'react-router-dom';
 import UserProfile from './UserProfile';
 
 const Events = () => {
+  const { adminId, loading } = useAdminId();
   const navigate = useNavigate();
   const [activeNav, setActiveNav] = useState('Events');
   
@@ -120,7 +122,7 @@ const Events = () => {
           <section className="events-display">
             <h2 className="section-title">My Progress</h2>
             <div className="event-cards-container">
-              {eventsList.filter(ev => ev && ev.id).map((eventItem, index) => (
+              {eventsList.filter(ev => ev && ev.id && ev.admin_id === adminId).map((eventItem, index) => (
                 <div
                   className="event-card"
                   key={eventItem.id}

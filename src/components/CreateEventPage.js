@@ -4,12 +4,16 @@ import UserProfile from './UserProfile';
 import { logEventChange } from '../utils/auditLogger';
 import { supabase } from '../supabaseClient';
 
+import { useAdminId } from '../hooks/useAdminId';
+
 const CreateEventPage = () => {
   const navigate = useNavigate();
   const [activeNav, setActiveNav] = useState('Events');
 
   // We'll store a unique ID on each new event
   const generateId = () => Date.now().toString();
+
+  const { adminId } = useAdminId();
 
   const [formData, setFormData] = useState({
     name: '',
@@ -94,10 +98,15 @@ const CreateEventPage = () => {
   };
 
   // Fetch planners from localStorage (added via MyTeam page)
-  const adminOptions = JSON.parse(localStorage.getItem('myTeamPlanners')) || [];
+  const allPlanners = JSON.parse(localStorage.getItem('myTeamPlanners')) || {};
+  const adminOptions = adminId ? (allPlanners[adminId] || []) : [];
 
   // Handle creating a new event
   const handleCreateEvent = async () => {
+    if (!adminId) {
+      alert('User not loaded. Please wait and try again.');
+      return;
+    }
     try {
       // 1) Get existing events from localStorage
       const existingEvents = JSON.parse(localStorage.getItem('events')) || [];
@@ -106,7 +115,8 @@ const CreateEventPage = () => {
       const newEvent = {
         id: generateId(),
         ...formData,
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
+        admin_id: adminId
       };
       // Remove file url if no file uploaded
       if (!formData.file) delete newEvent.file;
@@ -119,6 +129,7 @@ const CreateEventPage = () => {
 
       // 4) Push it into the array
       existingEvents.push(newEvent);
+
 
       // 5) Save updated array back to localStorage
       localStorage.setItem('events', JSON.stringify(existingEvents));

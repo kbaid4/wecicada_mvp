@@ -72,9 +72,9 @@ const SignInPage = () => {
         }
       }
       // Redirect based on user_type
-      if (user.user_metadata.type === "Admin") {
+      if (user.user_metadata.user_type === "admin") {
         navigate("/SuppliersPage");
-      } else if (user.user_metadata.type === "Supplier") {
+      } else if (user.user_metadata.user_type === "supplier") {
         navigate("/SupplierHomepage");
       } else {
         setError('Unknown user type, cannot redirect.');

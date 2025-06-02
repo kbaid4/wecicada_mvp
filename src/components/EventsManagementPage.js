@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { useAdminId } from '../hooks/useAdminId';
 import { useParams, useNavigate } from 'react-router-dom';
 import UserProfile from './UserProfile';
 
 const EventsManagementPage = () => {
+  const { adminId, loading } = useAdminId();
   const navigate = useNavigate();
   const { eventId } = useParams();
 
@@ -26,12 +28,16 @@ const EventsManagementPage = () => {
 
   useEffect(() => {
     const eventsFromStorage = JSON.parse(localStorage.getItem('events')) || [];
-    setAllEvents(eventsFromStorage);
-    const foundEvent = eventsFromStorage.find(ev => ev.id === eventId);
+    // Only show events created by this admin
+    const filteredEvents = eventsFromStorage.filter(ev => ev.admin_id === adminId);
+    setAllEvents(filteredEvents);
+    const foundEvent = filteredEvents.find(ev => ev.id === eventId);
     setCurrentEvent(foundEvent);
     const allTasksObj = JSON.parse(localStorage.getItem('tasks')) || {};
-    setTasks(allTasksObj[eventId] || []);
-  }, [eventId]);
+    // Only show tasks created by this admin
+    const filteredTasks = (allTasksObj[eventId] || []).filter(t => t.admin_id === adminId);
+    setTasks(filteredTasks);
+  }, [eventId, adminId]);
 
   const handleSelectEvent = (newEventId) => {
     navigate(`/EventsManagementPage/${newEventId}`);
@@ -194,11 +200,12 @@ const EventsManagementPage = () => {
             <thead>
               <tr>
                 <th>Task</th>
-                <th>Liaison</th>
+                <th>Supplier</th>
                 <th>Status</th>
                 <th>Date</th>
-                <th>Day</th>
+                <th>Description</th>
                 <th>Budget</th>
+                <th>Searched Supplier</th>
                 <th>Completed</th>
                 <th>Actions</th>
               </tr>
@@ -221,8 +228,9 @@ const EventsManagementPage = () => {
                       </select>
                     </td>
                     <td>{task.date}</td>
-                    <td>{task.day}</td>
+                    <td>{task.description}</td>
                     <td>{task.budget}</td>
+                    <td>{task.searchedSupplier || '-'}</td>
                     <td>
                       <input
                         type="checkbox"
