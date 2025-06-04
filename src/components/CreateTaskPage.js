@@ -32,7 +32,6 @@ const CreateTaskPage = () => {
   const [taskData, setTaskData] = useState({
     name: '',
     budget: '',
-    liaison: '',
     status: '',
     date: '',
     day: '',
@@ -41,15 +40,6 @@ const CreateTaskPage = () => {
   });
 
   const statusOptions = ['Stopped', 'In Progress', 'Negotiation'];
-  // Dynamically load liaisons (team members) from localStorage
-  const [liaisonOptions, setLiaisonOptions] = useState([]);
-  useEffect(() => {
-    // Liaisons are loaded from localStorage key 'supplierTeamLiaisons' (array of objects with name/email)
-    const liaisonsRaw = JSON.parse(localStorage.getItem('supplierTeamLiaisons')) || [];
-    // Only use names for dropdown
-    const liaisonNames = liaisonsRaw.filter(l => l && typeof l === 'object' && l.name).map(l => l.name);
-    setLiaisonOptions(liaisonNames);
-  }, []);
 
   // Fetch suppliers from Supabase
   const [supplierOptions, setSupplierOptions] = useState([]);
@@ -185,24 +175,6 @@ const CreateTaskPage = () => {
                     value={taskData.budget}
                     onChange={(e) => setTaskData({...taskData, budget: e.target.value})}
                   />
-                </div>
-                <div className="input-group">
-                  <label>Supplier</label>
-                  <select
-                    value={taskData.liaison}
-                    onChange={(e) => setTaskData({...taskData, liaison: e.target.value})}
-                  >
-                    <option value="">Select Supplier</option>
-                    {liaisonOptions.length === 0 && (
-                      <option disabled>No suppliers found.</option>
-                    )}
-                    {liaisonOptions.map(liaison => (
-                      <option key={liaison} value={liaison}>
-                        {liaison}
-                      </option>
-                    ))}
-                  </select>
-                  {/* Liaisons are loaded from localStorage key 'teamMembers' (array of names) */}
                 </div>
                 <div className="input-group">
                   <label>Search Suppliers</label>

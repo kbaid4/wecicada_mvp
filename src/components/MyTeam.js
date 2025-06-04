@@ -33,15 +33,34 @@ const MyTeam = () => {
   ];
 
   useEffect(() => {
-    // Load planners from localStorage, now as an object keyed by adminId
-    const allPlanners = JSON.parse(localStorage.getItem("myTeamPlanners")) || {};
-    const adminPlanners = adminId ? allPlanners[adminId] || [] : [];
-    setPlanners(adminPlanners);
+    // Load planners for this adminId from Supabase
+    if (!adminId) return;
+    async function fetchPlanners() {
+      try {
+        const { data, error } = await import('../supabaseClient').then(m => m.supabase
+          .from('planners')
+          .select('*')
+          .eq('user_id', adminId)
+          .order('created_at', { ascending: false })
+        );
+        if (!error && Array.isArray(data)) {
+          setPlanners(data);
+        } else {
+          setPlanners([]);
+        }
+      } catch {
+        setPlanners([]);
+      }
+    }
+    fetchPlanners();
   }, [adminId]);
 
-  const addPlanner = () => {
-    if (!adminId) {
-      alert('User not loaded. Please wait and try again.');
+  const addPlanner = async () => {
+    console.log("addPlanner called");
+    const { data: { user }, error: authError } = await import('../supabaseClient').then(m => m.supabase.auth.getUser());
+    console.log("auth user:", user, "auth error:", authError);
+    if (!user) {
+      alert('User not authenticated');
       return;
     }
     if (
@@ -51,30 +70,58 @@ const MyTeam = () => {
         (p) => p && typeof p === 'object' && p.name === newPlanner.trim() && p.email === newEmail.trim()
       )
     ) {
-      const updated = [...planners, { name: newPlanner.trim(), email: newEmail.trim(), admin_id: adminId }];
-      setPlanners(updated);
-      // Save planners as an object keyed by adminId
-      const allPlanners = JSON.parse(localStorage.getItem("myTeamPlanners")) || {};
-      allPlanners[adminId] = updated;
-      localStorage.setItem("myTeamPlanners", JSON.stringify(allPlanners));
+      try {
+        const adminEmail = user.email;
+        const { data, error } = await import('../supabaseClient').then(m => m.supabase
+          .from('planners')
+          .insert([{ user_id: user.id, admin_email: adminEmail, name: newPlanner.trim(), email: newEmail.trim() }])
+          .select()
+        );
+        console.log("insert result:", data, error);
+        if (!error && Array.isArray(data)) {
+          setPlanners([data[0], ...planners]);
+        } else if (error) {
+          alert('Error adding planner: ' + error.message);
+          console.error('Supabase insert error:', error.message);
+        }
+      } catch (err) {
+        alert('Unexpected error: ' + err.message);
+        console.error('Unexpected error:', err);
+      }
       setNewPlanner("");
       setNewEmail("");
     }
   };
 
-  const removePlanner = (name, email) => {
-    const updated = planners.filter(
-      (p) => !(p && typeof p === 'object' && p.name === name && p.email === email)
-    );
-    setPlanners(updated);
-    // Save planners as an object keyed by adminId
-    const allPlanners = JSON.parse(localStorage.getItem("myTeamPlanners")) || {};
-    allPlanners[adminId] = updated;
-    localStorage.setItem("myTeamPlanners", JSON.stringify(allPlanners));
+  // (No debug logs needed for removePlanner)
+  const removePlanner = async (name, email) => {
+    if (!adminId) return;
+    try {
+      const plannerToRemove = planners.find(p => p.name === name && p.email === email);
+      if (plannerToRemove && plannerToRemove.id) {
+        await import('../supabaseClient').then(m => m.supabase
+          .from('planners')
+          .delete()
+          .eq('id', plannerToRemove.id)
+        );
+      }
+      const updated = planners.filter(
+        (p) => !(p && typeof p === 'object' && p.name === name && p.email === email)
+      );
+      setPlanners(updated);
+    } catch {
+      // fallback: just update UI
+      const updated = planners.filter(
+        (p) => !(p && typeof p === 'object' && p.name === name && p.email === email)
+      );
+      setPlanners(updated);
+    }
   };
 
   return (
+
     <div className="app-container">
+
       <nav className="top-nav">
         <div className="nav-section left">
           <img 
@@ -432,3 +479,4 @@ const MyTeam = () => {
 }
 
 export default MyTeam;
+

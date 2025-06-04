@@ -200,7 +200,6 @@ const EventsManagementPage = () => {
             <thead>
               <tr>
                 <th>Task</th>
-                <th>Supplier</th>
                 <th>Status</th>
                 <th>Date</th>
                 <th>Description</th>
@@ -219,7 +218,6 @@ const EventsManagementPage = () => {
                 tasks.map((task, index) => (
                   <tr key={index}>
                     <td>{task.name}</td>
-                    <td>{task.liaison || task.supplier}</td>
                     <td>
                       <select value={task.status} onChange={(e) => handleStatusChange(index, e.target.value)}>
                         {statusOptions.map(status => (

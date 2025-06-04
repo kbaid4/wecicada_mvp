@@ -82,15 +82,37 @@ const SupplierTeam = () => {
     fetchSupplierId();
   }, []);
 
-  // Load liaisons for this supplierId
+  // Load liaisons for this supplierId from Supabase
   useEffect(() => {
     if (!supplierId) return;
-    const allLiaisons = JSON.parse(localStorage.getItem("supplierTeamLiaisons")) || {};
-    setLiaisons(Array.isArray(allLiaisons[supplierId]) ? allLiaisons[supplierId] : []);
+    async function fetchLiaisons() {
+      try {
+        const { data, error } = await import('../supabaseClient').then(m => m.supabase
+          .from('liaisons')
+          .select('*')
+          .eq('user_id', supplierId)
+          .order('created_at', { ascending: false })
+        );
+        if (!error && Array.isArray(data)) {
+          setLiaisons(data);
+        } else {
+          setLiaisons([]);
+        }
+      } catch {
+        setLiaisons([]);
+      }
+    }
+    fetchLiaisons();
   }, [supplierId]);
 
-  const addLiaison = () => {
-    if (!supplierId) { alert('User not loaded. Please wait and try again.'); return; }
+  const addLiaison = async () => {
+    console.log("addLiaison called");
+    const { data: { user }, error: authError } = await import('../supabaseClient').then(m => m.supabase.auth.getUser());
+    console.log("auth user:", user, "auth error:", authError);
+    if (!user) {
+      alert('User not authenticated');
+      return;
+    }
     if (
       newLiaison.trim() &&
       newEmail.trim() &&
@@ -98,26 +120,55 @@ const SupplierTeam = () => {
         (l) => l && typeof l === 'object' && l.name === newLiaison.trim() && l.email === newEmail.trim()
       )
     ) {
-      const updated = [...liaisons, { name: newLiaison.trim(), email: newEmail.trim() }];
-      setLiaisons(updated);
-      const allLiaisons = JSON.parse(localStorage.getItem("supplierTeamLiaisons")) || {};
-      allLiaisons[supplierId] = updated;
-      localStorage.setItem("supplierTeamLiaisons", JSON.stringify(allLiaisons));
+      try {
+        const adminEmail = user.email;
+        const { data, error } = await import('../supabaseClient').then(m => m.supabase
+          .from('liaisons')
+          .insert([{ user_id: user.id, admin_email: adminEmail, name: newLiaison.trim(), email: newEmail.trim() }])
+          .select()
+        );
+        console.log("insert result:", data, error);
+        if (!error && Array.isArray(data)) {
+          setLiaisons([data[0], ...liaisons]);
+        } else if (error) {
+          alert('Error adding liaison: ' + error.message);
+          console.error('Supabase insert error:', error.message);
+        }
+      } catch (err) {
+        alert('Unexpected error: ' + err.message);
+        console.error('Unexpected error:', err);
+      }
       setNewLiaison("");
       setNewEmail("");
     }
   };
 
-  const removeLiaison = (name, email) => {
+  // Optionally, update/remove logic to delete from Supabase as well if needed
+  // (No debug logs needed for removeLiaison)
+  const removeLiaison = async (name, email) => {
     if (!supplierId) return;
-    const updated = liaisons.filter(
-      (l) => !(l && typeof l === 'object' && l.name === name && l.email === email)
-    );
-    setLiaisons(updated);
-    const allLiaisons = JSON.parse(localStorage.getItem("supplierTeamLiaisons")) || {};
-    allLiaisons[supplierId] = updated;
-    localStorage.setItem("supplierTeamLiaisons", JSON.stringify(allLiaisons));
+    try {
+      const liaisonToRemove = liaisons.find(l => l.name === name && l.email === email);
+      if (liaisonToRemove && liaisonToRemove.id) {
+        await import('../supabaseClient').then(m => m.supabase
+          .from('liaisons')
+          .delete()
+          .eq('id', liaisonToRemove.id)
+        );
+      }
+      const updated = liaisons.filter(
+        (l) => !(l && typeof l === 'object' && l.name === name && l.email === email)
+      );
+      setLiaisons(updated);
+    } catch {
+      // fallback: just update UI
+      const updated = liaisons.filter(
+        (l) => !(l && typeof l === 'object' && l.name === name && l.email === email)
+      );
+      setLiaisons(updated);
+    }
   };
+
 
   const mainNavItems = [
     { name: 'Home', path: '/SupplierHomepage' },

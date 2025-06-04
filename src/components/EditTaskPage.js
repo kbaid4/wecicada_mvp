@@ -28,20 +28,28 @@ const EditTaskPage = () => {
   const [taskData, setTaskData] = useState({
     name: '',
     budget: '',
-    liaison: '',
     status: '',
     date: '',
-    day: ''
+    description: '',
+    searchedSupplier: ''
   });
   const statusOptions = ['Stopped', 'In Progress', 'Negotiation', 'Completed'];
-  const [liaisonOptions, setLiaisonOptions] = useState([]);
+  const [supplierOptions, setSupplierOptions] = useState([]);
 
   useEffect(() => {
-    // Load liaisons from 'supplierTeamLiaisons' for dropdown
-    const liaisonsRaw = JSON.parse(localStorage.getItem('supplierTeamLiaisons')) || [];
-    const liaisonNames = liaisonsRaw.filter(l => l && typeof l === 'object' && l.name).map(l => l.name);
-    setLiaisonOptions(liaisonNames);
-    // Load task data
+    async function fetchSuppliers() {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name, email, company_name, created_at, user_type')
+        .eq('user_type', 'supplier')
+        .order('created_at', { ascending: false });
+      if (!error && Array.isArray(data)) {
+        setSupplierOptions(data);
+      } else {
+        setSupplierOptions([]);
+      }
+    }
+    fetchSuppliers();
     const allTasksObj = JSON.parse(localStorage.getItem('tasks')) || {};
     const taskArr = allTasksObj[eventId] || [];
     if (taskArr[taskIndex]) {
@@ -278,12 +286,20 @@ const EditTaskPage = () => {
                   <input type="number" name="budget" value={taskData.budget} onChange={handleInputChange} />
                 </div>
                 <div className="input-group">
-                  <label>Supplier</label>
-                  <select name="liaison" value={taskData.liaison} onChange={handleInputChange}>
-                    <option value="">Select Supplier</option>
-                    {liaisonOptions.map((liaison, idx) => (
-                      <option key={idx} value={liaison}>{liaison}</option>
-                    ))}
+                  <label>Search Suppliers</label>
+                  <select
+                    name="searchedSupplier"
+                    value={taskData.searchedSupplier}
+                    onChange={handleInputChange}
+                  >
+                    <option value="">Select Supplier from Signup</option>
+                    {supplierOptions.length === 0 && <option disabled>No suppliers found.</option>}
+                    {supplierOptions.map(supplier => {
+                      const displayName = supplier.full_name || supplier.company_name || supplier.email || `Supplier ${supplier.id}`;
+                      return (
+                        <option key={supplier.id} value={displayName}>{displayName}</option>
+                      );
+                    })}
                   </select>
                 </div>
               </div>
@@ -302,8 +318,8 @@ const EditTaskPage = () => {
                   <input type="date" name="date" value={taskData.date} onChange={handleInputChange} />
                 </div>
                 <div className="input-group">
-                  <label>Day</label>
-                  <input type="text" name="day" value={taskData.day} onChange={handleInputChange} />
+                  <label>Description</label>
+                  <input type="text" name="description" value={taskData.description} onChange={handleInputChange} />
                 </div>
               </div>
             </div>
