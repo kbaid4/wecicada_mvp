@@ -47,6 +47,17 @@ const SignUpPage = () => {
     }
     setError('');
 
+    // Prevent duplicate registration by email
+    const { data: existing, error: existingError } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('email', formData.email)
+      .single();
+    if (existing) {
+      setError('An account with this email already exists.');
+      return;
+    }
+
     try {
       // DEBUG: Log what type is selected at signup
       console.log('SignUp: formData.type =', formData.type);

@@ -41,23 +41,41 @@ const CreateTaskPage = () => {
 
   const statusOptions = ['Stopped', 'In Progress', 'Negotiation'];
 
-  // Fetch suppliers from Supabase
-  const [supplierOptions, setSupplierOptions] = useState([]);
+  // Fetch suppliers from Supabase and categorize them
+  const [mySuppliers, setMySuppliers] = useState([]);
+  const [signedUpSuppliers, setSignedUpSuppliers] = useState([]);
   useEffect(() => {
     async function fetchSuppliers() {
-      const { data, error } = await supabase
+      // 1. Get all suppliers
+      const { data: allSuppliers, error: profilesError } = await supabase
         .from('profiles')
         .select('id, full_name, email, company_name, created_at, user_type')
         .eq('user_type', 'supplier')
         .order('created_at', { ascending: false });
-      if (!error && Array.isArray(data)) {
-        setSupplierOptions(data);
-      } else {
-        setSupplierOptions([]);
+      if (profilesError || !Array.isArray(allSuppliers)) {
+        setMySuppliers([]);
+        setSignedUpSuppliers([]);
+        return;
       }
+      // 2. Get event-specific suppliers (invited by admin)
+      let eventSupplierEmails = [];
+      if (eventId) {
+        const { data: eventSuppliers, error: eventSuppliersError } = await supabase
+          .from('event_suppliers')
+          .select('supplier_email')
+          .eq('event_id', eventId);
+        if (!eventSuppliersError && Array.isArray(eventSuppliers)) {
+          eventSupplierEmails = eventSuppliers.map(es => es.supplier_email);
+        }
+      }
+      // 3. Categorize
+      const mySuppliersArr = allSuppliers.filter(s => eventSupplierEmails.includes(s.email));
+      const signedUpSuppliersArr = allSuppliers.filter(s => !eventSupplierEmails.includes(s.email));
+      setMySuppliers(mySuppliersArr);
+      setSignedUpSuppliers(signedUpSuppliersArr);
     }
     fetchSuppliers();
-  }, []);
+  }, [eventId]);
 
   useEffect(() => {
     const allTasksObj = JSON.parse(localStorage.getItem('tasks')) || {}; 
@@ -182,14 +200,28 @@ const CreateTaskPage = () => {
                     value={taskData.searchedSupplier}
                     onChange={e => setTaskData({ ...taskData, searchedSupplier: e.target.value })}
                   >
-                    <option value="">Select Supplier from Signup</option>
-                    {supplierOptions.length === 0 && <option disabled>No suppliers found.</option>}
-                    {supplierOptions.map(supplier => {
-                      const displayName = supplier.full_name || supplier.companyname || supplier.email || `Supplier ${supplier.id}`;
-                      return (
-                        <option key={supplier.id} value={displayName}>{displayName}</option>
-                      );
-                    })}
+                    <option value="">Select Supplier</option>
+                    {mySuppliers.length > 0 && (
+                      <optgroup label="My Suppliers">
+                        {mySuppliers.map(supplier => {
+                          const displayName = supplier.full_name || supplier.company_name || supplier.email || `Supplier ${supplier.id}`;
+                          return (
+                            <option key={supplier.id} value={supplier.id}>{displayName}</option>
+                          );
+                        })}
+                      </optgroup>
+                    )}
+                    {signedUpSuppliers.length > 0 && (
+                      <optgroup label="Signed Up Suppliers">
+                        {signedUpSuppliers.map(supplier => {
+                          const displayName = supplier.full_name || supplier.company_name || supplier.email || `Supplier ${supplier.id}`;
+                          return (
+                            <option key={supplier.id} value={supplier.id}>{displayName}</option>
+                          );
+                        })}
+                      </optgroup>
+                    )}
+                    {mySuppliers.length === 0 && signedUpSuppliers.length === 0 && <option disabled>No suppliers found.</option>}
                   </select>
                 </div>
               </div>

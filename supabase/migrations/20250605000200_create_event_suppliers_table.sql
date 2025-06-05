@@ -1,7 +1,7 @@
 -- Migration: Create event_suppliers join table for event-supplier associations
 CREATE TABLE IF NOT EXISTS event_suppliers (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    event_id uuid REFERENCES events(id) ON DELETE CASCADE,
+    event_id uuid REFERENCES event_audit_logs(id) ON DELETE CASCADE,
     supplier_email text NOT NULL,
     supplier_user_id uuid REFERENCES profiles(id),
     invited_at timestamptz DEFAULT now()

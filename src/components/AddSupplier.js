@@ -13,33 +13,58 @@ const AddSupplier = () => {
   });
   const [error, setError] = useState('');
 
-  const handleSubmit = (e) => {
+  // Async function to call the Edge Function
+  async function inviteSupplier(supplier_email, event_id) {
+    const response = await fetch('https://oesorptwsvoydqhmkbof.functions.supabase.co/invite_supplier', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        // Optionally: 'Authorization': `Bearer ${process.env.REACT_APP_SUPABASE_ANON_KEY}`
+      },
+      body: JSON.stringify({
+        supplier_email,
+        event_id
+      }),
+    });
+    const data = await response.json();
+    if (response.ok) {
+      alert('Supplier invited successfully!');
+      return true;
+    } else {
+      alert('Failed to invite supplier: ' + (data.error || response.statusText));
+      return false;
+    }
+  }
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
       return;
     }
-    console.log('Form submitted:', formData);
     setError('');
-    // Save supplier name to localStorage for display
-    localStorage.setItem('supplierName', formData.name);
-    if (eventId) {
-      // Add supplier to event's invitedSuppliers array in localStorage
-      const eventsArr = JSON.parse(localStorage.getItem('events')) || [];
-      const eventIdx = eventsArr.findIndex(ev => ev.id === eventId);
-      if (eventIdx !== -1) {
-        if (!Array.isArray(eventsArr[eventIdx].invitedSuppliers)) {
-          eventsArr[eventIdx].invitedSuppliers = [];
+    // Call the inviteSupplier function
+    const success = await inviteSupplier(formData.email, eventId);
+    if (success) {
+      // Save supplier name to localStorage for display
+      localStorage.setItem('supplierName', formData.name);
+      if (eventId) {
+        // Add supplier to event's invitedSuppliers array in localStorage
+        const eventsArr = JSON.parse(localStorage.getItem('events')) || [];
+        const eventIdx = eventsArr.findIndex(ev => ev.id === eventId);
+        if (eventIdx !== -1) {
+          if (!Array.isArray(eventsArr[eventIdx].invitedSuppliers)) {
+            eventsArr[eventIdx].invitedSuppliers = [];
+          }
+          // Only add if not already present
+          if (!eventsArr[eventIdx].invitedSuppliers.includes(formData.name)) {
+            eventsArr[eventIdx].invitedSuppliers.push(formData.name);
+          }
+          localStorage.setItem('events', JSON.stringify(eventsArr));
         }
-        // Only add if not already present
-        if (!eventsArr[eventIdx].invitedSuppliers.includes(formData.name)) {
-          eventsArr[eventIdx].invitedSuppliers.push(formData.name);
-        }
-        localStorage.setItem('events', JSON.stringify(eventsArr));
+        navigate(`/EventsManagementPage/${eventId}`);
       }
-      navigate(`/EventsManagementPage/${eventId}`);
     }
-
   }
 
   const handleChange = (e) => {
