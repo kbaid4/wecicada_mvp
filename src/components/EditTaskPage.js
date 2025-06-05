@@ -35,6 +35,14 @@ const EditTaskPage = () => {
   });
   const statusOptions = ['Stopped', 'In Progress', 'Negotiation', 'Completed'];
   const [supplierOptions, setSupplierOptions] = useState([]);
+  // TODO: Replace with real data if needed
+  const mySuppliers = [];
+
+  useEffect(() => {
+    // Load suppliers from localStorage (signedUpSuppliers)
+    const localSuppliers = JSON.parse(localStorage.getItem('signedUpSuppliers') || '[]');
+    setSupplierOptions(localSuppliers);
+  }, []);
 
   useEffect(() => {
     async function fetchSuppliers() {
@@ -288,25 +296,40 @@ const EditTaskPage = () => {
                 <div className="input-group">
                   <label>Search Suppliers</label>
                   <select
-                    name="searchedSupplier"
-                    value={taskData.searchedSupplier}
-                    onChange={handleInputChange}
-                  >
-                    <option value="">Select Supplier from Signup</option>
-                    {supplierOptions.length === 0 && <option disabled>No suppliers found.</option>}
-                    {supplierOptions.map(supplier => {
-                      const displayName = supplier.full_name || supplier.company_name || supplier.email || `Supplier ${supplier.id}`;
-                      return (
-                        <option key={supplier.id} value={displayName}>{displayName}</option>
-                      );
-                    })}
-                  </select>
+  value={taskData.searchedSupplier}
+  onChange={e => setTaskData({ ...taskData, searchedSupplier: e.target.value })}
+>
+  <option value="">Select Supplier</option>
+  {mySuppliers && mySuppliers.length > 0 && (
+    <optgroup label="My Suppliers">
+      {mySuppliers.map(supplier => {
+        const displayName = supplier.full_name || supplier.company_name || supplier.email || `Supplier ${supplier.id}`;
+        return (
+          <option key={supplier.id} value={supplier.id}>{displayName}</option>
+        );
+      })}
+    </optgroup>
+  )}
+  {(() => {
+    const localSuppliers = JSON.parse(localStorage.getItem('signedUpSuppliers') || '[]');
+    return localSuppliers.length > 0 ? (
+      <optgroup label="Signed Up Suppliers">
+        {localSuppliers.map(supplier => {
+          const displayName = supplier.name || supplier.email || `Supplier ${supplier.id}`;
+          const serviceType = supplier.serviceType;
+          return (
+            <option key={supplier.id} value={supplier.id}>
+              {serviceType ? `${displayName} (${serviceType})` : `${displayName} (No Service Type)`}
+            </option>
+          );
+        })}
+      </optgroup>
+    ) : null;
+  })()}
+</select>
                 </div>
-              </div>
-              <div className="form-column">
                 <div className="input-group">
-                  <label>Status</label>
-                  <select name="status" value={taskData.status} onChange={handleInputChange}>
+                <select name="status" value={taskData.status} onChange={handleInputChange}>
                     <option value="">Select Status</option>
                     {statusOptions.map((status, idx) => (
                       <option key={idx} value={status}>{status}</option>
