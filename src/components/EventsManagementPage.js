@@ -228,7 +228,15 @@ const EventsManagementPage = () => {
                     <td>{task.date}</td>
                     <td>{task.description}</td>
                     <td>{task.budget}</td>
-                    <td>{task.searchedSupplier || '-'}</td>
+                    <td>{(() => {
+  if (!task.searchedSupplier) return '-';
+  const localSuppliers = JSON.parse(localStorage.getItem('signedUpSuppliers') || '[]');
+  const supplier = localSuppliers.find(s => s.id === task.searchedSupplier);
+  if (!supplier) return task.searchedSupplier;
+  const displayName = supplier.name || supplier.email || `Supplier ${supplier.id}`;
+  const serviceType = supplier.serviceType;
+  return serviceType ? `${displayName} (${serviceType})` : `${displayName} (No Service Type)`;
+})()}</td>
                     <td>
                       <input
                         type="checkbox"
