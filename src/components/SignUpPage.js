@@ -110,6 +110,15 @@ const SignUpPage = () => {
       if (formData.type === "Admin") {
         navigate("/SuppliersPage");
       } else if (formData.type === "Supplier") {
+        // Store supplier info and serviceType in localStorage
+        const signedUpSuppliers = JSON.parse(localStorage.getItem('signedUpSuppliers') || '[]');
+        signedUpSuppliers.push({
+          id: authData.user.id,
+          name: formData.name,
+          email: formData.email,
+          serviceType: formData.serviceType
+        });
+        localStorage.setItem('signedUpSuppliers', JSON.stringify(signedUpSuppliers));
         navigate("/SupplierHomepage");
       } else {
         setError('Unknown user type, cannot redirect.');

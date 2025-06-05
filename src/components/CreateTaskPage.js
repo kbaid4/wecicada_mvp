@@ -213,12 +213,18 @@ const CreateTaskPage = () => {
                     )}
                     {signedUpSuppliers.length > 0 && (
                       <optgroup label="Signed Up Suppliers">
-                        {signedUpSuppliers.map(supplier => {
-                          const displayName = supplier.full_name || supplier.company_name || supplier.email || `Supplier ${supplier.id}`;
-                          return (
-                            <option key={supplier.id} value={supplier.id}>{displayName}</option>
-                          );
-                        })}
+                        {(() => {
+  const localSuppliers = JSON.parse(localStorage.getItem('signedUpSuppliers') || '[]');
+  return localSuppliers.length > 0 ? localSuppliers.map(supplier => {
+    const displayName = supplier.name || supplier.email || `Supplier ${supplier.id}`;
+    const serviceType = supplier.serviceType;
+    return (
+      <option key={supplier.id} value={supplier.id}>
+        {serviceType ? `${displayName} (${serviceType})` : `${displayName} (No Service Type)`}
+      </option>
+    );
+  }) : <option disabled>No signed up suppliers found.</option>;
+})()}
                       </optgroup>
                     )}
                     {mySuppliers.length === 0 && signedUpSuppliers.length === 0 && <option disabled>No suppliers found.</option>}

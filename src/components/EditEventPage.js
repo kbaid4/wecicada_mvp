@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAdminId } from '../hooks/useAdminId';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { logEventChange } from '../utils/auditLogger';
@@ -83,7 +84,35 @@ const EditEventPage = () => {
       'Town/County Hall Meetings', 'Government Conferences', 'Civic Engagement Events', 'Public Forums'
     ]
   };
-  const adminOptions = JSON.parse(localStorage.getItem('myTeamPlanners')) || [];
+  // Fetch planners from Supabase (added via MyTeam page)
+const { adminId } = useAdminId();
+const [planners, setPlanners] = useState([]);
+const [plannersLoading, setPlannersLoading] = useState(false);
+
+useEffect(() => {
+  async function fetchPlanners() {
+    if (!adminId) return;
+    setPlannersLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('planners')
+        .select('*')
+        .eq('user_id', adminId)
+        .order('created_at', { ascending: false });
+      if (!error && Array.isArray(data)) {
+        setPlanners(data);
+      } else {
+        setPlanners([]);
+      }
+    } catch {
+      setPlanners([]);
+    }
+    setPlannersLoading(false);
+  }
+  fetchPlanners();
+}, [adminId]);
+
+const adminOptions = planners;
 
   useEffect(() => {
     const events = JSON.parse(localStorage.getItem('events')) || [];
@@ -428,21 +457,34 @@ const EditEventPage = () => {
               </div>
               <div className="form-column">
                 <div className="input-group">
-                  <label>Add Planner</label>
-                  <select name="addadmin" value={formData.addadmin} onChange={handleChange}>
-                    <option value="">Select Planner</option>
-                    {adminOptions.map(admin => {
-                      if (admin && typeof admin === 'object' && admin.name && admin.email) {
-                        return (
-                          <option key={admin.email} value={admin.email}>
-                            {admin.name} ({admin.email})
-                          </option>
-                        );
-                      }
-                      return null;
-                    })}
-                  </select>
-                </div>
+  <label>Add Planner</label>
+  <select
+    name="addadmin"
+    value={formData.addadmin}
+    onChange={handleChange}
+    disabled={plannersLoading}
+  >
+    <option value="">Select Planner</option>
+    {plannersLoading ? (
+      <option value="" disabled>Loading planners...</option>
+    ) : (
+      adminOptions.length === 0 ? (
+        <option value="" disabled>No planners available</option>
+      ) : (
+        adminOptions.map(admin => {
+          if (admin && typeof admin === 'object' && admin.name && admin.email) {
+            return (
+              <option key={admin.email} value={admin.email}>
+                {admin.name} ({admin.email})
+              </option>
+            );
+          }
+          return null;
+        })
+      )
+    )}
+  </select>
+</div>
                 <div className="input-group">
                   <label>Location</label>
                   <input type="text" name="location" value={formData.location} onChange={handleChange} />
