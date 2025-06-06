@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import UserProfile from './UserProfile';
 import { logEventChange } from '../utils/auditLogger';
 import { supabase } from '../supabaseClient';
+import { v4 as uuidv4 } from 'uuid';
 
 import { useAdminId } from '../hooks/useAdminId';
 
@@ -11,7 +12,7 @@ const CreateEventPage = () => {
   const [activeNav, setActiveNav] = useState('Events');
 
   // We'll store a unique ID on each new event
-  const generateId = () => Date.now().toString();
+  const generateId = () => uuidv4();
 
   const { adminId } = useAdminId();
 
@@ -133,38 +134,51 @@ const CreateEventPage = () => {
       return;
     }
     try {
-      // 1) Get existing events from localStorage
-      const existingEvents = JSON.parse(localStorage.getItem('events')) || [];
-
-      // 2) Create a new event object with unique ID
-      const newEvent = {
+      // Prepare event data for Supabase
+      const eventData = {
         id: generateId(),
-        ...formData,
+        name: formData.name,
+        budget: formData.budget === '' ? null : Number(formData.budget),
+        type: formData.type,
+        sub_type: formData.subType,
+        planner_email: formData.addadmin,
+        location: formData.location,
+        start_date: formData.startDate === '' ? null : formData.startDate,
+        end_date: formData.endDate === '' ? null : formData.endDate,
+        visibility: formData.visibility,
+        admin_id: adminId,
         created_at: new Date().toISOString(),
-        admin_id: adminId
       };
-      // Remove file url if no file uploaded
-      if (!formData.file) delete newEvent.file;
-
-      // 3) Log the event creation
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        await logEventChange('create', newEvent, user.id);
+      // Insert into 'events' table
+      const { data, error } = await supabase
+        .from('events')
+        .insert([eventData])
+        .select();
+      if (error) {
+        alert('Failed to create event: ' + error.message);
+        return;
       }
-
-      // 4) Push it into the array
-      existingEvents.push(newEvent);
-
-
-      // 5) Save updated array back to localStorage
+      const createdEvent = data && data[0];
+      if (!createdEvent) {
+        alert('Event creation failed: No event returned');
+        return;
+      }
+      // Store in localStorage for offline use (optional)
+      const existingEvents = JSON.parse(localStorage.getItem('events')) || [];
+      existingEvents.push(createdEvent);
       localStorage.setItem('events', JSON.stringify(existingEvents));
-
-      // 6) Navigate directly to the management page for this event
-      navigate(`/EventsManagementPage/${newEvent.id}`);
+      // Prompt the user to add suppliers or go to event management
+      if (window.confirm('Event created! Would you like to invite suppliers now?')) {
+        navigate(`/AddSupplier/${createdEvent.id}`);
+      } else {
+        navigate(`/EventsManagementPage/${createdEvent.id}`);
+      }
     } catch (error) {
       console.error('Error creating event:', error);
+      alert('An unexpected error occurred while creating the event.');
     }
   };
+
 
   return (
     <div className="app-container">

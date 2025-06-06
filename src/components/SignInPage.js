@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import styles from './SignInPage.module.css';
 import { supabase } from '../supabaseClient';
+import { linkSupplierInvites } from '../utils/inviteLinking';
 
 const SignInPage = () => {
   const navigate = useNavigate();
@@ -75,6 +76,12 @@ const SignInPage = () => {
       if (user.user_metadata.user_type === "admin") {
         navigate("/SuppliersPage");
       } else if (user.user_metadata.user_type === "supplier") {
+        // Link any pending invites for this supplier
+        // (event existence is now checked in the 'events' table, not event_audit_logs)
+        await linkSupplierInvites({
+          supplierId: user.id,
+          supplierEmail: credentials.email
+        });
         navigate("/SupplierHomepage");
       } else {
         setError('Unknown user type, cannot redirect.');

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { supabase } from '../supabaseClient';
 import { useAdminId } from '../hooks/useAdminId';
 import { useParams, useNavigate } from 'react-router-dom';
 import UserProfile from './UserProfile';
@@ -27,16 +28,35 @@ const EventsManagementPage = () => {
   ];
 
   useEffect(() => {
-    const eventsFromStorage = JSON.parse(localStorage.getItem('events')) || [];
-    // Only show events created by this admin
-    const filteredEvents = eventsFromStorage.filter(ev => ev.admin_id === adminId);
-    setAllEvents(filteredEvents);
-    const foundEvent = filteredEvents.find(ev => ev.id === eventId);
-    setCurrentEvent(foundEvent);
-    const allTasksObj = JSON.parse(localStorage.getItem('tasks')) || {};
-    // Only show tasks created by this admin
-    const filteredTasks = (allTasksObj[eventId] || []).filter(t => t.admin_id === adminId);
-    setTasks(filteredTasks);
+    const fetchEvents = async () => {
+      if (!adminId) return;
+      try {
+        const { data: events, error } = await supabase
+          .from('events')
+          .select('*')
+          .eq('admin_id', adminId);
+        if (error) {
+          console.error('Failed to fetch events:', error);
+          setAllEvents([]);
+          setCurrentEvent(null);
+          setTasks([]);
+          return;
+        }
+        setAllEvents(events);
+        const foundEvent = events.find(ev => ev.id === eventId);
+        setCurrentEvent(foundEvent);
+        // For now, keep using localStorage for tasks until migrated
+        const allTasksObj = JSON.parse(localStorage.getItem('tasks')) || {};
+        const filteredTasks = (allTasksObj[eventId] || []).filter(t => t.admin_id === adminId);
+        setTasks(filteredTasks);
+      } catch (err) {
+        console.error('Error fetching events:', err);
+        setAllEvents([]);
+        setCurrentEvent(null);
+        setTasks([]);
+      }
+    };
+    fetchEvents();
   }, [eventId, adminId]);
 
   const handleSelectEvent = (newEventId) => {

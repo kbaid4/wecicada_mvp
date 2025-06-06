@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { supabase } from '../supabaseClient';
 import { useAdminId } from '../hooks/useAdminId';
 import { useNavigate, useLocation } from 'react-router-dom';
 import UserProfile from './UserProfile';
@@ -14,19 +15,37 @@ const Events = () => {
   const location = useLocation();
   // Always reload events when navigating to this page
   useEffect(() => {
+    const fetchEvents = async () => {
+      if (!adminId) return;
+      try {
+        const { data: events, error } = await supabase
+          .from('events')
+          .select('*')
+          .eq('admin_id', adminId);
+        if (error) {
+          console.error('Failed to fetch events:', error);
+          // fallback to localStorage for offline/legacy
+          const storedEvents = JSON.parse(localStorage.getItem('events')) || [];
+          setEventsList(storedEvents);
+          return;
+        }
+        setEventsList(events);
+      } catch (err) {
+        console.error('Error fetching events:', err);
+        // fallback to localStorage for offline/legacy
+        const storedEvents = JSON.parse(localStorage.getItem('events')) || [];
+        setEventsList(storedEvents);
+      }
+    };
+    fetchEvents();
+    // Optionally, listen to storage for offline changes
     const updateEvents = () => {
       const storedEvents = JSON.parse(localStorage.getItem('events')) || [];
       setEventsList(storedEvents);
     };
-    updateEvents();
     window.addEventListener('storage', updateEvents);
-    // Listen for navigation-triggered reloads
-    if (sessionStorage.getItem('reloadEvents') === '1') {
-      updateEvents();
-      sessionStorage.removeItem('reloadEvents');
-    }
     return () => window.removeEventListener('storage', updateEvents);
-  }, [location]);
+  }, [adminId, supabase]); // Add supabase to dependency array
 
   // Navigation data
   // User info will be handled by UserProfile component

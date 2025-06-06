@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useParams } from "react-router-dom";
+import { supabase } from '../supabaseClient';
+import { useAdminId } from '../hooks/useAdminId';
 
 const AddSupplier = () => {
   const { eventId } = useParams();
@@ -7,63 +9,62 @@ const AddSupplier = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     name: '',
-    email: '',
-    password: '',
-    confirmPassword: ''
+    email: ''
   });
   const [error, setError] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
+  const [loadingInvite, setLoadingInvite] = useState(false);
 
-  // Async function to call the Edge Function
-  async function inviteSupplier(supplier_email, event_id) {
-    const response = await fetch('https://oesorptwsvoydqhmkbof.functions.supabase.co/invite_supplier', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        // Optionally: 'Authorization': `Bearer ${process.env.REACT_APP_SUPABASE_ANON_KEY}`
-      },
-      body: JSON.stringify({
-        supplier_email,
-        event_id
-      }),
-    });
-    const data = await response.json();
-    if (response.ok) {
-      alert('Supplier invited successfully!');
-      return true;
-    } else {
-      alert('Failed to invite supplier: ' + (data.error || response.statusText));
+  // Invite supplier by inserting into Supabase invites table
+  async function inviteSupplier(supplier_email, event_id, admin_id) {
+    setError('');
+    setSuccessMsg('');
+    setLoadingInvite(true);
+    const payload = {
+      event_id,
+      supplier_email,
+      invited_by_admin_id: admin_id
+    };
+    try {
+      const { data, error } = await supabase
+        .from('invites')
+        .insert([payload]);
+      if (error) {
+        console.error('Supabase invite insert error:', error, 'Payload:', payload);
+        setError('Failed to invite supplier: ' + error.message + (error.details ? ' (' + error.details + ')' : ''));
+        setLoadingInvite(false);
+        return false;
+      } else {
+        setSuccessMsg('Supplier invited successfully!');
+        setLoadingInvite(false);
+        return true;
+      }
+    } catch (err) {
+      console.error('Unexpected error during invite insert:', err, 'Payload:', payload);
+      setError('Unexpected error: ' + err.message);
+      setLoadingInvite(false);
       return false;
     }
   }
 
+  const { adminId, loading } = useAdminId(); // loading here is from useAdminId, not local invite
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
+    if (!adminId) {
+      setError('Admin ID not found. Please log in again.');
       return;
     }
-    setError('');
-    // Call the inviteSupplier function
-    const success = await inviteSupplier(formData.email, eventId);
+    if (!formData.email) {
+      setError('Supplier email is required');
+      return;
+    }
+    const success = await inviteSupplier(formData.email, eventId, adminId);
     if (success) {
-      // Save supplier name to localStorage for display
-      localStorage.setItem('supplierName', formData.name);
-      if (eventId) {
-        // Add supplier to event's invitedSuppliers array in localStorage
-        const eventsArr = JSON.parse(localStorage.getItem('events')) || [];
-        const eventIdx = eventsArr.findIndex(ev => ev.id === eventId);
-        if (eventIdx !== -1) {
-          if (!Array.isArray(eventsArr[eventIdx].invitedSuppliers)) {
-            eventsArr[eventIdx].invitedSuppliers = [];
-          }
-          // Only add if not already present
-          if (!eventsArr[eventIdx].invitedSuppliers.includes(formData.name)) {
-            eventsArr[eventIdx].invitedSuppliers.push(formData.name);
-          }
-          localStorage.setItem('events', JSON.stringify(eventsArr));
-        }
+      setFormData({ name: '', email: '' });
+      setTimeout(() => {
         navigate(`/EventsManagementPage/${eventId}`);
-      }
+      }, 1000);
     }
   }
 
@@ -79,6 +80,11 @@ const AddSupplier = () => {
   return (
     <div className="main-container">
       <div className="signup-container">
+        <form onSubmit={handleSubmit}>
+          {error && <div style={{ color: 'red', marginBottom: '10px' }}>{error}</div>}
+          {successMsg && <div style={{ color: 'green', marginBottom: '10px' }}>{successMsg}</div>}
+
+        </form>
       <div className="logo-container">
           <img 
             src={`${process.env.PUBLIC_URL}/images/landingpage/logo.png`} 

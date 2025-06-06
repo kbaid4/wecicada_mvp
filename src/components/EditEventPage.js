@@ -115,12 +115,32 @@ useEffect(() => {
 const adminOptions = planners;
 
   useEffect(() => {
-    const events = JSON.parse(localStorage.getItem('events')) || [];
-    const found = events.find(ev => ev.id === eventId);
-    if (found) {
-      setFormData({ ...found });
-    }
-    setLoading(false);
+    const fetchEvent = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('events')
+          .select('*')
+          .eq('id', eventId)
+          .single();
+        if (error) {
+          // fallback to localStorage for offline/legacy
+          const eventsArr = JSON.parse(localStorage.getItem('events')) || [];
+          const foundEvent = eventsArr.find(ev => ev.id === eventId);
+          setFormData(foundEvent);
+          setLoading(false);
+          return;
+        }
+        setFormData(data);
+        setLoading(false);
+      } catch (err) {
+        // fallback to localStorage for offline/legacy
+        const eventsArr = JSON.parse(localStorage.getItem('events')) || [];
+        const foundEvent = eventsArr.find(ev => ev.id === eventId);
+        setFormData(foundEvent);
+        setLoading(false);
+      }
+    };
+    fetchEvent();
   }, [eventId]);
 
   const handleChange = (e) => {
@@ -142,7 +162,6 @@ const adminOptions = planners;
           .from('events')
           .update(formData)
           .eq('id', eventId);
-        
         if (error) {
           console.warn('Supabase update failed, falling back to localStorage:', error);
           throw error;
@@ -151,7 +170,6 @@ const adminOptions = planners;
         console.warn('Database operation failed, using localStorage only:', dbError);
         // Continue with localStorage update
       }
-      
       // Also update in localStorage for immediate UI update
       const events = JSON.parse(localStorage.getItem('events')) || [];
       const updatedEvents = events.map(ev =>

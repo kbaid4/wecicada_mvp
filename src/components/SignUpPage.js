@@ -4,6 +4,7 @@ import styles from './SignUpPage.module.css';
 
 import { useEffect } from 'react';
 import { supabase } from '../supabaseClient';
+import { linkSupplierInvites } from '../utils/inviteLinking';
 
 const SignUpPage = () => {
   const navigate = useNavigate();
@@ -110,15 +111,27 @@ const SignUpPage = () => {
       if (formData.type === "Admin") {
         navigate("/SuppliersPage");
       } else if (formData.type === "Supplier") {
+        // Get new user id from signup response
+        const newUserId = authData?.user?.id;
+        if (!newUserId) {
+          setError('Could not determine user ID after signup.');
+          return;
+        }
         // Store supplier info and serviceType in localStorage
         const signedUpSuppliers = JSON.parse(localStorage.getItem('signedUpSuppliers') || '[]');
         signedUpSuppliers.push({
-          id: authData.user.id,
+          id: newUserId,
           name: formData.name,
           email: formData.email,
           serviceType: formData.serviceType
         });
         localStorage.setItem('signedUpSuppliers', JSON.stringify(signedUpSuppliers));
+        // Link any pending invites for this supplier
+        // (event existence is now checked in the 'events' table, not event_audit_logs)
+        await linkSupplierInvites({
+          supplierId: newUserId,
+          supplierEmail: formData.email
+        });
         navigate("/SupplierHomepage");
       } else {
         setError('Unknown user type, cannot redirect.');
