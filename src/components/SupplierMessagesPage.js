@@ -137,7 +137,7 @@ const SupplierMessagesPage = () => {
                 style={{cursor:'pointer', background: selectedEvent && ev.eventId === selectedEvent.eventId ? '#fff' : undefined, color: '#441752'}}
                 onClick={() => setSelectedEvent(ev)}
               >
-                <div style={{fontWeight:'bold'}}>{ev.eventName}</div>
+                <div style={{fontWeight:'bold'}}>{ev.eventName.replace('(Missing)', '')}</div>
               </div>
             ))}
           </div>
@@ -145,7 +145,7 @@ const SupplierMessagesPage = () => {
           <div className="chat-box">
             <div className="supplier-name">
               {selectedEvent ? (
-                <span style={{fontWeight:600}}>{selectedEvent.eventName}</span>
+                <span style={{fontWeight:600}}>{selectedEvent.eventName.replace('(Missing)', '')}</span>
               ) : 'Select an event'}
             </div>
             {/* Chat Messages */}
