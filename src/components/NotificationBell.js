@@ -1,5 +1,185 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabaseClient';
+import { FaBell, FaCheck, FaCheckDouble, FaTimes } from 'react-icons/fa';
+import styled from 'styled-components';
+
+// Styled components for better organization and theming
+const NotificationContainer = styled.div`
+  position: relative;
+  margin: 0 8px;
+`;
+
+const BellButton = styled.button`
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 1.2rem;
+  cursor: pointer;
+  position: relative;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+  
+  @media (max-width: 768px) {
+    width: 36px;
+    height: 36px;
+    font-size: 1.1rem;
+  }
+`;
+
+const Badge = styled.span`
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  background-color: #ff4757;
+  color: white;
+  border-radius: 10px;
+  min-width: 18px;
+  height: 18px;
+  font-size: 0.7rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  padding: 0 4px;
+  
+  @media (max-width: 768px) {
+    min-width: 16px;
+    height: 16px;
+    font-size: 0.6rem;
+  }
+`;
+
+const Dropdown = styled.div`
+  position: fixed;
+  top: 60px;
+  right: 20px;
+  width: 90%;
+  max-width: 400px;
+  max-height: 80vh;
+  background-color: white;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transform: ${({ isOpen }) => (isOpen ? 'translateY(0)' : 'translateY(-10px)')};
+  opacity: ${({ isOpen }) => (isOpen ? '1' : '0')};
+  visibility: ${({ isOpen }) => (isOpen ? 'visible' : 'hidden')};
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  @media (min-width: 768px) {
+    position: absolute;
+    top: 50px;
+    right: 0;
+    width: 380px;
+  }
+  
+  @media (max-width: 480px) {
+    right: 10px;
+    width: calc(100% - 20px);
+  }
+`;
+
+const Header = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  border-bottom: 1px solid #eee;
+  background-color: #f8f9fa;
+`;
+
+const Title = styled.h3`
+  margin: 0;
+  font-size: 1rem;
+  color: #333;
+  font-weight: 600;
+`;
+
+const MarkAllButton = styled.button`
+  background: none;
+  border: none;
+  font-size: 0.8rem;
+  color: #4a6cf7;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: background-color 0.2s;
+  
+  &:hover {
+    background-color: rgba(74, 108, 247, 0.1);
+  }
+`;
+
+const NotificationList = styled.div`
+  overflow-y: auto;
+  flex: 1;
+  max-height: 400px;
+  -webkit-overflow-scrolling: touch;
+`;
+
+const EmptyState = styled.div`
+  padding: 32px 16px;
+  text-align: center;
+  color: #666;
+  font-size: 0.9rem;
+`;
+
+const NotificationItem = styled.div`
+  padding: 14px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  background-color: ${({ unread }) => (unread ? '#f8f9ff' : 'white')};
+  cursor: ${({ unread }) => (unread ? 'pointer' : 'default')};
+  transition: background-color 0.2s, transform 0.1s;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  
+  &:active {
+    transform: scale(0.99);
+  }
+  
+  &:hover {
+    background-color: ${({ unread }) => (unread ? '#f0f4ff' : '#f9f9f9')};
+  }
+`;
+
+const Message = styled.div`
+  font-size: 0.9rem;
+  color: #333;
+  line-height: 1.4;
+`;
+
+const Time = styled.div`
+  font-size: 0.75rem;
+  color: #888;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+`;
+
+const ReadIndicator = styled.span`
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #4a6cf7;
+  margin-right: 4px;
+`;
 
 const NotificationBell = ({ userType, userId, supplierEmail }) => {
   const [notifications, setNotifications] = useState([]);
@@ -347,150 +527,87 @@ const NotificationBell = ({ userType, userId, supplierEmail }) => {
     return date.toLocaleDateString();
   };
 
+  // Close dropdown when clicking outside or pressing Escape
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+
   return (
-    <div className="notification-bell-container" style={{ position: 'relative' }}>
-      <button 
+    <NotificationContainer>
+      <BellButton 
         onClick={() => setIsOpen(!isOpen)}
-        className="notification-bell-button"
-        style={{
-          background: 'none',
-          border: 'none',
-          color: '#fff',
-          fontSize: '18px',
-          cursor: 'pointer',
-          position: 'relative',
-          width: '32px',
-          height: '32px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          margin: '0 8px'
-        }}
         aria-label="Notifications"
+        aria-expanded={isOpen}
       >
-        {/* Bell Icon */}
-        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-          <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-        </svg>
-        
-        {/* Notification Badge */}
+        <FaBell />
         {unreadCount > 0 && (
-          <span style={{
-            position: 'absolute',
-            top: '0',
-            right: '0',
-            backgroundColor: '#ff4757',
-            color: 'white',
-            borderRadius: '50%',
-            width: '16px',
-            height: '16px',
-            fontSize: '10px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontWeight: 'bold'
-          }}>
+          <Badge>
             {unreadCount > 9 ? '9+' : unreadCount}
-          </span>
+          </Badge>
         )}
-      </button>
+      </BellButton>
 
-      {/* Dropdown Menu */}
-      {isOpen && (
-        <div 
-          ref={dropdownRef}
-          className="notification-dropdown"
-          style={{
-            position: 'absolute',
-            top: '40px',
-            right: '0',
-            width: '320px',
-            maxHeight: '400px',
-            backgroundColor: 'white',
-            borderRadius: '8px',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-            zIndex: '1000',
-            overflow: 'hidden',
-            display: 'flex',
-            flexDirection: 'column'
-          }}
-        >
-          {/* Header */}
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            padding: '12px 16px',
-            borderBottom: '1px solid #eee',
-            backgroundColor: '#f8f9fa'
-          }}>
-            <h3 style={{ margin: 0, fontSize: '16px', color: '#441752', fontWeight: '600' }}>
-              Notifications
-            </h3>
-            {unreadCount > 0 && (
-              <button 
-                onClick={markAllAsRead}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  fontSize: '12px',
-                  color: '#441752',
-                  cursor: 'pointer',
-                  padding: '4px 8px',
-                  borderRadius: '4px',
-                  fontWeight: '500'
-                }}
-              >
-                Mark all as read
-              </button>
-            )}
-          </div>
+      <Dropdown 
+        ref={dropdownRef}
+        isOpen={isOpen}
+        aria-hidden={!isOpen}
+      >
+        <Header>
+          <Title>Notifications</Title>
+          {unreadCount > 0 ? (
+            <MarkAllButton onClick={markAllAsRead}>
+              <FaCheckDouble size={12} />
+              <span>Mark all as read</span>
+            </MarkAllButton>
+          ) : (
+            <MarkAllButton onClick={() => setIsOpen(false)}>
+              <FaTimes size={14} />
+            </MarkAllButton>
+          )}
+        </Header>
 
-          {/* Notification List */}
-          <div style={{ 
-            overflowY: 'auto',
-            flex: '1',
-            maxHeight: '320px'
-          }}>
-            {notifications.length === 0 ? (
-              <div style={{ padding: '24px 16px', textAlign: 'center', color: '#666' }}>
-                No notifications yet
-              </div>
-            ) : (
-              notifications
-                .map(notification => {
-                  const message = formatNotificationMessage(notification);
-                  // Skip notifications that return null from formatNotificationMessage
-                  if (message === null) return null;
-                  
-                  return (
-                    <div 
-                      key={notification.id}
-                      onClick={() => notification.status === 'unread' && markAsRead(notification.id)}
-                      style={{
-                        padding: '12px 16px',
-                        borderBottom: '1px solid #eee',
-                        backgroundColor: notification.status === 'unread' ? '#f0f4ff' : 'white',
-                        cursor: notification.status === 'unread' ? 'pointer' : 'default',
-                        transition: 'background-color 0.2s'
-                      }}
-                    >
-                      <div style={{ fontSize: '14px', color: '#333', marginBottom: '4px' }}>
-                        {message}
-                      </div>
-                      <div style={{ fontSize: '12px', color: '#888' }}>
-                        {formatRelativeTime(notification.created_at)}
-                      </div>
-                    </div>
-                  );
-                })
-                .filter(Boolean) // Remove any null entries
-            )}
-          </div>
-        </div>
-      )}
-    </div>
+        <NotificationList>
+          {notifications.length === 0 ? (
+            <EmptyState>No notifications yet</EmptyState>
+          ) : (
+            notifications
+              .map(notification => {
+                const message = formatNotificationMessage(notification);
+                if (message === null) return null;
+                
+                const isUnread = notification.status === 'unread';
+                
+                return (
+                  <NotificationItem
+                    key={notification.id}
+                    unread={isUnread}
+                    onClick={() => isUnread && markAsRead(notification.id)}
+                  >
+                    <Message>
+                      {isUnread && <ReadIndicator aria-hidden="true" />}
+                      {message}
+                    </Message>
+                    <Time>
+                      {isUnread && <FaCheck size={10} />}
+                      {formatRelativeTime(notification.created_at)}
+                    </Time>
+                  </NotificationItem>
+                );
+              })
+              .filter(Boolean)
+          )}
+        </NotificationList>
+      </Dropdown>
+    </NotificationContainer>
   );
 };
 
